@@ -47,7 +47,7 @@ function create(params) {
             } else {
                 if (i % 2) {
                     if (j % 2) {
-                        const oct = Octogon.create({ isRed: 0, x: j, y: i, isVert: 1 });
+                        const oct = Octogon.create({ board, isRed: 0, x: j, y: i, isVert: 1 });
                         board.addChild(oct);
                         octogonsW[i].push(oct);
                     } else {
@@ -55,7 +55,7 @@ function create(params) {
                     }
                 } else {
                     if (!(j % 2)) {
-                        const oct = Octogon.create({ isRed: 0, x: j, y: i, isVert: 0 });
+                        const oct = Octogon.create({ board, isRed: 0, x: j, y: i, isVert: 0 });
                         board.addChild(oct);
                         octogonsW[i].push(oct);
                     } else {
@@ -74,7 +74,7 @@ function create(params) {
             } else {
                 if (i % 2) {
                     if (j % 2) {
-                        const oct = Octogon.create({ isRed: 1, x: j, y: i, isVert: 0 });
+                        const oct = Octogon.create({ board, isRed: 1, x: j, y: i, isVert: 0 });
                         board.addChild(oct);
                         octogonsR[i].push(oct);
                     } else {
@@ -82,7 +82,7 @@ function create(params) {
                     }
                 } else {
                     if (!(j % 2)) {
-                        const oct = Octogon.create({ isRed: 1, x: j, y: i, isVert: 1 });
+                        const oct = Octogon.create({ board, isRed: 1, x: j, y: i, isVert: 1 });
                         board.addChild(oct);
                         octogonsR[i].push(oct);
                     } else {
@@ -93,28 +93,57 @@ function create(params) {
         }
     }
 
-    board.doMove = (isRed, x, y) => {
-        State.doMove(isRed, x, y);
-        if (isRed) {
-            octogonsR[y][x]?.markMove(1);
-            octogonsW[y][x]?.markMove(1);
-        } else {
-            octogonsR[y][x]?.markMove(0);
-            octogonsW[y][x]?.markMove(0);
-        }
+    board.doMove = (x, y) => doMove(board, x, y);
+
+    // Store child octs
+    board.octs = {
+        red: octogonsR,
+        white: octogonsW,
     };
 
-
+    // Move board graphically
     board.position.x = margin;
     board.position.y = margin;
-
-
-    window.foo = board;
-    window.goo = State;
 
     return board;
 }
 
+function prepareTurn(board) {
+    const state = State.getState();
+
+    for (let row of board.octs.red) {
+        for (let o of row) {
+            if (o) {
+                Octogon.prepareTurn(o, state.isRedTurn);
+            }
+        }
+    }
+    for (let row of board.octs.white) {
+        for (let o of row) {
+            if (o) {
+                Octogon.prepareTurn(o, state.isRedTurn);
+            }
+        }
+    }
+}
+
+function doMove(board, x, y) {
+    const { isRedTurn } = State.getState();
+    State.doMove(isRedTurn, x, y);
+
+    if (isRedTurn) {
+        board.octs.red[y][x]?.markMove(1);
+        board.octs.white[y][x]?.markMove(1);
+    } else {
+        board.octs.red[y][x]?.markMove(0);
+        board.octs.white[y][x]?.markMove(0);
+    }
+
+    prepareTurn(board);
+}
+
 export default {
     create,
+    prepareTurn,
+    doMove,
 };

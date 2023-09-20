@@ -8,7 +8,7 @@ function getGraphicalCoords(x, y) {
 const OCTRATIO = 1;
 
 function create(params) {
-    const { isRed, x, y, isVert, isRealized, isIllegal, isBlocked } = params;
+    const { board, isRed, x, y, isVert, isRealized, isIllegal } = params;
 
     const g = new PIXI.Graphics();
     g.beginFill(COLOR.black);
@@ -107,47 +107,62 @@ function create(params) {
     }
     g.endFill();
 
-
-    if (isBlocked) {
-        g.alpha = 0;
-        return g;
-    }
-
     if (!isRealized) {
-        g.tint = 0x222222;
+        highlight(g, false);
     }
-
-    g.markMove = _isRed => {
-        g.eventMode = 'none';
-        if (_isRed === isRed) {
-            g.tint = 0xffffff;
-            g.alpha = 1;
-            g.visible = true;
-        } else {
-            g.tint = 0x222222;
-            g.alpha = 0;
-            g.visible = false;
-        }
-
-    };
 
     g.eventMode = 'static';
-    g.game = { isRealized, isRed, isVert, timeHover: 0 };
-    g.on('pointerover', () => {
-        clearTimeout(g.game.timeHover);
-        g.game.timeHover = setTimeout(() => {
-            g.tint = 0x222222;
-        }, 800);
-        g.tint = 0xdddddd;
-    });
-    g.on('pointerout', () => {
-        clearTimeout(g.game.timeHover);
-        g.tint = 0x222222;
-    });
+
+    g.markMove = _isRed => realize(g, _isRed);
+
+    g.gamepieceState = { x, y, board, isRealized, isRed, isVert };
+
+    g.on('pointerover', () => highlight(g, true));
+    g.on('pointerout', () => highlight(g, false));
+    g.on('pointerdown', () => board.doMove(x, y));
 
     return g;
 }
 
+function prepareTurn(oct, isRedTurn) {
+    if (oct.gamepieceState.isRealized) return;
+
+    enable(oct, (oct.gamepieceState.isRed && isRedTurn) || (!oct.gamepieceState.isRed && !isRedTurn));
+}
+
+function highlight(oct, isOn) {
+    oct.tint = isOn ? 0xdddddd : 0x222222;
+}
+
+function enable(oct, isEnabled) {
+    if (isEnabled) {
+        oct.eventMode = 'static';
+        oct.alpha = 1;
+        oct.tint = 0x222222;
+        oct.visible = true;
+    } else {
+        oct.eventMode = 'none';
+        oct.alpha = 0;
+        oct.visible = false;
+    }
+}
+
+function realize(oct, _isRed) {
+    oct.eventMode = 'none';
+    oct.gamepieceState.isRealized = true;
+
+    if (_isRed === oct.gamepieceState.isRed) {
+        oct.tint = 0xffffff;
+        oct.alpha = 1;
+        oct.visible = true;
+    } else {
+        oct.tint = 0x222222;
+        oct.alpha = 0;
+        oct.visible = false;
+    }
+}
+
 export default {
     create,
+    prepareTurn,
 };
