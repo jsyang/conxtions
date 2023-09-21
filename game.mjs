@@ -8,12 +8,14 @@ import Board from './board.mjs';
 function create(params) {
     const { stage } = params;
 
-    const board = Board.create({ margin: 120 });
-    stage.addChild(board);
+    const board = Board.create({ margin: 160 });
 
     Board.prepareTurn(board);
+
+    stage.addChild(board);
 }
 
 export default {
     create,
+
 };

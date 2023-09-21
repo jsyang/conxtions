@@ -131,14 +131,15 @@ function prepareTurn(oct, isRedTurn) {
 }
 
 function highlight(oct, isOn) {
-    oct.tint = isOn ? 0xdddddd : 0x222222;
+    oct.tint = isOn ? 0xdddddd : 0x333333;
 }
 
+// Used to temporarily restrict interactivity depending on turn
 function enable(oct, isEnabled) {
     if (isEnabled) {
         oct.eventMode = 'static';
         oct.alpha = 1;
-        oct.tint = 0x222222;
+        oct.tint = 0x333333;
         oct.visible = true;
     } else {
         oct.eventMode = 'none';
@@ -156,13 +157,21 @@ function realize(oct, _isRed) {
         oct.alpha = 1;
         oct.visible = true;
     } else {
-        oct.tint = 0x222222;
+        oct.tint = 0x333333;
         oct.alpha = 0;
         oct.visible = false;
     }
 }
 
+// Used at the end of a game to remove all interactivity
+function disable(oct) {
+    oct.eventMode = 'none';
+    oct.gamepieceState.isRealized = true;
+}
+
 export default {
     create,
     prepareTurn,
+    disable,
+    enable,
 };

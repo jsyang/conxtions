@@ -3,6 +3,7 @@ import Square from './square.mjs';
 import Octogon from './octogon.mjs';
 
 import State from './state.mjs';
+import { COLOR, SIZE } from './constants.mjs';
 
 function create(params) {
     const { margin } = params;
@@ -105,11 +106,34 @@ function create(params) {
     board.position.x = margin;
     board.position.y = margin;
 
+    const text = new PIXI.Text(`White's move`, {
+        fontFamily: 'Arial',
+        fontSize: 24,
+        fill: 0xff1010,
+        align: 'center',
+    });
+
+    text.anchor.set(0.5);
+
+    text.x = (5 * .5 * SIZE.SPACEWIDTH);
+    text.y = -SIZE.SPACEWIDTH;
+
+    board.textTitle = text;
+    board.addChild(text);
+
     return board;
 }
 
 function prepareTurn(board) {
     const state = State.getState();
+
+    if(state.isGameOver) {
+        board.textTitle.style.fill = state.isWinnerRed? COLOR.red : COLOR.white;
+        board.textTitle.text = `${state.isWinnerRed? 'Red' : 'White'} Wins!`;
+
+        disable(board);
+        return;
+    }
 
     for (let row of board.octs.red) {
         for (let o of row) {
@@ -125,6 +149,9 @@ function prepareTurn(board) {
             }
         }
     }
+
+    board.textTitle.style.fill = state.isRedTurn? COLOR.red : COLOR.white;
+    board.textTitle.text = `${state.isRedTurn? 'Red' : 'White'}'s Move`;
 }
 
 function doMove(board, x, y) {
@@ -142,8 +169,24 @@ function doMove(board, x, y) {
     prepareTurn(board);
 }
 
+function disable(board) {
+    for (let row of [...board.octs.red,...board.octs.white]) {
+        for (let o of row) {
+            if (o) {
+                Octogon.disable(o);
+            }
+        }
+    }
+}
+
+function reset(board) {
+    State.reset();
+    prepareTurn(board);
+}
+
 export default {
     create,
     prepareTurn,
     doMove,
+    reset,
 };
