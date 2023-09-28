@@ -40,22 +40,66 @@ function getState() {
 // Returns true if box-in win condition is satisified for either side
 // false otherwise
 
-// TODO: Detect all box-ins, not just 1x1
-function checkBoxIn() {
-    // Check red squares
-    for (let x = 2; x <= 8; x += 2) {
-        for (let y = 1; y <= 9; y += 2) {
-            const isTileBoxedIn =
-                // N
-                (_stateW[y - 1] & (1 << x)) &&
-                // S
-                (_stateW[y + 1] & (1 << x)) &&
-                // E
-                (_stateW[y] & (1 << (x + 1))) &&
-                // W
-                (_stateW[y] & (1 << (x - 1)));
+// Returns  0 if position not been marked
+//          non-zero otherwise
+function checkPositionMarked(state, x, y) {
+    // Do nothing if square being checked was not valid
+    if (
+        (x === 0 && y === 0) ||
+        (x === 10 && y === 0) ||
+        (x === 10 && y === 10) ||
+        (x === 0 && y === 10) ||
+        (x < 0 || y < 0 || x > 10 || y > 10)
+    ) {
+        return 0;
+    }
 
-            if (isTileBoxedIn) {
+    return state[y] ? state[y] & (1 << x) : 0;
+}
+
+function checkSquareConnected(visitedSquares, x, y, octs, totalInSprawl) {
+    // Don't revisit a square
+    if (visitedSquares[y] & (1 << x)) return;
+
+    // Mark unvisited square as visited
+    visitedSquares[y] |= 1 << x;
+    totalInSprawl.vertices++;
+
+    // Check all 4 directions for connections and add to the totals for this spread
+    let N, E, S, W;
+
+    N = !checkPositionMarked(visitedSquares, x, y - 2) && checkPositionMarked(octs, x, y - 1);
+    S = !checkPositionMarked(visitedSquares, x, y + 2) && checkPositionMarked(octs, x, y + 1);
+    E = !checkPositionMarked(visitedSquares, x + 2, y) && checkPositionMarked(octs, x + 1, y);
+    W = !checkPositionMarked(visitedSquares, x - 2, y) && checkPositionMarked(octs, x - 1, y);
+
+    totalInSprawl.edges += [N, E, S, W].filter(Boolean).length;
+    if (N) checkSquareConnected(visitedSquares, x, y - 2, octs, totalInSprawl);
+    if (S) checkSquareConnected(visitedSquares, x, y + 2, octs, totalInSprawl);
+    if (E) checkSquareConnected(visitedSquares, x + 2, y, octs, totalInSprawl);
+    if (W) checkSquareConnected(visitedSquares, x - 2, y, octs, totalInSprawl);
+}
+
+// TODO: fill this in via AI code gen?
+function checkBoxIn() {
+    const visitedSquares = (new Array(11)).fill(0);
+    const totalInSprawl = {
+        edges: 0,
+        vertices: 0,
+    };
+
+    // Check white squares
+    for (let x = 1; x <= 9; x += 2) {
+        for (let y = 0; y <= 10; y += 2) {
+            // Starting conditions
+            totalInSprawl.edges = 0;
+            totalInSprawl.vertices = 0;
+
+            if (checkPositionMarked(visitedSquares, x, y)) continue;
+
+            checkSquareConnected(visitedSquares, x, y, _stateW, totalInSprawl);
+
+            if (totalInSprawl.edges === totalInSprawl.vertices) {
                 _isWinnerRed = 0;
                 _isGameOver = 1;
                 return true;
@@ -63,20 +107,20 @@ function checkBoxIn() {
         }
     }
 
-    // Check white squares
-    for (let x = 1; x <= 9; x += 2) {
-        for (let y = 2; y <= 8; y += 2) {
-            const isTileBoxedIn =
-                // N
-                (_stateR[y - 1] & (1 << x)) &&
-                // S
-                (_stateR[y + 1] & (1 << x)) &&
-                // E
-                (_stateR[y] & (1 << (x + 1))) &&
-                // W
-                (_stateR[y] & (1 << (x - 1)));
+    // Reset visited squares
+    visitedSquares.fill(0);
+    // Check red squares
+    for (let x = 0; x <= 10; x += 2) {
+        for (let y = 1; y <= 9; y += 2) {
+            // Starting conditions
+            totalInSprawl.edges = 0;
+            totalInSprawl.vertices = 0;
 
-            if (isTileBoxedIn) {
+            if (checkPositionMarked(visitedSquares, x, y)) continue;
+
+            checkSquareConnected(visitedSquares, x, y, _stateR, totalInSprawl);
+
+            if (totalInSprawl.edges === totalInSprawl.vertices) {
                 _isWinnerRed = 1;
                 _isGameOver = 1;
                 return true;
@@ -242,8 +286,6 @@ function checkLinkRedFromPosition(state, visitedOcts, x, y) {
         isConnected ||=
             (N && checkLinkRedFromPosition(state, visitedOcts, x, y - 2)) ||
             (S && checkLinkRedFromPosition(state, visitedOcts, x, y + 2));
-
-
     }
 
     if (isConnected) return true;
