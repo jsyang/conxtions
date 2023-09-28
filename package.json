@@ -1,12 +1,12 @@
 {
   "name": "connections",
   "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "serve": "serve"
+    "serve": "npx serve",
+    "deploy": "node deploy.js"
   },
-  "dependencies": {
-    "serve": "^14.2.1"
+  "devDependencies": {
+    "wrangler": "^3.10.1"
   }
 }
