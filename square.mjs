@@ -21,6 +21,5 @@ function create(params) {
 }
 
 export default {
-    COLOR,
     create,
 };

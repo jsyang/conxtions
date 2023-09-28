@@ -1,7 +1,6 @@
 // Primarily used for state persistence
 // Used as a singleton module
 
-// OPTIMIZE: to take out blank rows
 const _stateR = (new Array(11)).fill(0);
 const _stateW = (new Array(11)).fill(0);
 let _stateIsRedTurn = 0;
@@ -23,7 +22,7 @@ function doMove(isRed, x, y) {
     if (checkWinCondition_BoxIn()) return;
     if (checkWinCondition_LinkUp()) return;
     
-    // Toggle between red's turn and not
+    // Toggle turn marker between red / white
     _stateIsRedTurn ^= 1;
 }
 
