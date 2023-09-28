@@ -20,11 +20,11 @@ function doMove(isRed, x, y) {
     const state = isRed ? _stateR : _stateW;
     state[y] |= 1 << x;
 
+    if (checkWinCondition_BoxIn()) return;
+    if (checkWinCondition_LinkUp()) return;
+    
     // Toggle between red's turn and not
     _stateIsRedTurn ^= 1;
-
-    if (checkBoxIn()) return;
-    if (checkLinks()) return;
 }
 
 function getState() {
@@ -37,26 +37,9 @@ function getState() {
     };
 }
 
-// Returns true if box-in win condition is satisified for either side
-// false otherwise
+import { isMarked } from './state.helpers.mjs';
 
-// Returns  0 if position not been marked
-//          non-zero otherwise
-function checkPositionMarked(state, x, y) {
-    // Do nothing if square being checked was not valid
-    if (
-        (x === 0 && y === 0) ||
-        (x === 10 && y === 0) ||
-        (x === 10 && y === 10) ||
-        (x === 0 && y === 10) ||
-        (x < 0 || y < 0 || x > 10 || y > 10)
-    ) {
-        return 0;
-    }
-
-    return state[y] ? state[y] & (1 << x) : 0;
-}
-
+// Recursively check if a square is linked to another square by an edge
 function checkSquareConnected(visitedSquares, x, y, octs, totalInSprawl) {
     // Don't revisit a square
     if (visitedSquares[y] & (1 << x)) return;
@@ -68,10 +51,10 @@ function checkSquareConnected(visitedSquares, x, y, octs, totalInSprawl) {
     // Check all 4 directions for connections and add to the totals for this spread
     let N, E, S, W;
 
-    N = !checkPositionMarked(visitedSquares, x, y - 2) && checkPositionMarked(octs, x, y - 1);
-    S = !checkPositionMarked(visitedSquares, x, y + 2) && checkPositionMarked(octs, x, y + 1);
-    E = !checkPositionMarked(visitedSquares, x + 2, y) && checkPositionMarked(octs, x + 1, y);
-    W = !checkPositionMarked(visitedSquares, x - 2, y) && checkPositionMarked(octs, x - 1, y);
+    N = !isMarked(visitedSquares, x, y - 2) && isMarked(octs, x, y - 1);
+    S = !isMarked(visitedSquares, x, y + 2) && isMarked(octs, x, y + 1);
+    E = !isMarked(visitedSquares, x + 2, y) && isMarked(octs, x + 1, y);
+    W = !isMarked(visitedSquares, x - 2, y) && isMarked(octs, x - 1, y);
 
     totalInSprawl.edges += [N, E, S, W].filter(Boolean).length;
     if (N) checkSquareConnected(visitedSquares, x, y - 2, octs, totalInSprawl);
@@ -81,7 +64,7 @@ function checkSquareConnected(visitedSquares, x, y, octs, totalInSprawl) {
 }
 
 // TODO: fill this in via AI code gen?
-function checkBoxIn() {
+function checkWinCondition_BoxIn() {
     const visitedSquares = (new Array(11)).fill(0);
     const totalInSprawl = {
         edges: 0,
@@ -95,7 +78,7 @@ function checkBoxIn() {
             totalInSprawl.edges = 0;
             totalInSprawl.vertices = 0;
 
-            if (checkPositionMarked(visitedSquares, x, y)) continue;
+            if (isMarked(visitedSquares, x, y)) continue;
 
             checkSquareConnected(visitedSquares, x, y, _stateW, totalInSprawl);
 
@@ -116,7 +99,7 @@ function checkBoxIn() {
             totalInSprawl.edges = 0;
             totalInSprawl.vertices = 0;
 
-            if (checkPositionMarked(visitedSquares, x, y)) continue;
+            if (isMarked(visitedSquares, x, y)) continue;
 
             checkSquareConnected(visitedSquares, x, y, _stateR, totalInSprawl);
 
@@ -131,13 +114,13 @@ function checkBoxIn() {
     return false;
 }
 
-function checkLinks() {
+function checkWinCondition_LinkUp() {
     const visitedOcts = (new Array(11)).fill(0);
     // Start from top row (white squares)
     for (let x = 1; x <= 9; x += 2) {
-        if (!(_stateW[1] & (1 << x))) continue;
+        if (!isMarked(_stateW, x, 1)) continue;
 
-        const hasLinkedUpTopBottom = checkLinkWhiteFromPosition(_stateW, visitedOcts, x, 1);
+        const hasLinkedUpTopBottom = checkLinksFromPosition(visitedOcts, x, 1, false);
 
         if (hasLinkedUpTopBottom) {
             _isGameOver = 1;
@@ -149,9 +132,9 @@ function checkLinks() {
     visitedOcts.fill(0);
     // Start from left col (red squares)
     for (let y = 1; y <= 9; y += 2) {
-        if (!(_stateR[y] & 2)) continue;
+        if (!isMarked(_stateR, 1, y)) continue;
 
-        const hasLinkedUpLeftRight = checkLinkRedFromPosition(_stateR, visitedOcts, 1, y);
+        const hasLinkedUpLeftRight = checkLinksFromPosition(visitedOcts, 1, y, true);
 
         if (hasLinkedUpLeftRight) {
             _isGameOver = 1;
@@ -163,140 +146,67 @@ function checkLinks() {
     return false;
 }
 
-function checkLinkWhiteFromPosition(state, visitedOcts, x, y) {
+function checkLinksFromPosition(visitedOcts, x, y, isRed) {
     if (x <= 0 || x >= 10 || y <= 0 || y >= 10) return false;
     visitedOcts[y] |= 1 << x;
 
+    const state = isRed ? _stateR : _stateW;
+
     // Top Right
-    const visitedTR = visitedOcts[y - 1] & (1 << (x + 1));
-    const TR = !visitedTR && (state[y - 1] & (1 << (x + 1)));
-
     // Bottom Right
-    const visitedBR = visitedOcts[y + 1] & (1 << (x + 1));
-    const BR = !visitedBR && (state[y + 1] & (1 << (x + 1)));
-
     // Top Left
-    const visitedTL = visitedOcts[y - 1] & (1 << (x - 1));
-    const TL = !visitedTL && (state[y - 1] & (1 << (x - 1)));
-
     // Bottom Left
-    const visitedBL = visitedOcts[y + 1] & (1 << (x - 1));
-    const BL = !visitedBL && (state[y + 1] & (1 << (x - 1)));
+    const TR = !isMarked(visitedOcts, x + 1, y - 1) && isMarked(state, x + 1, y - 1);
+    const BR = !isMarked(visitedOcts, x + 1, y + 1) && isMarked(state, x + 1, y + 1);
+    const TL = !isMarked(visitedOcts, x - 1, y - 1) && isMarked(state, x - 1, y - 1);
+    const BL = !isMarked(visitedOcts, x - 1, y + 1) && isMarked(state, x - 1, y + 1);
 
     let isConnected = false;
 
-    if (x % 2) {
-        // Verticals moves
-        // N
-        const visitedN = visitedOcts[y - 2] & (1 << x);
-        const N = !visitedN && (state[y - 2] & (1 << x));
-
-        // S
-        const visitedS = visitedOcts[y + 2] & (1 << x);
-        const S = !visitedS && (state[y + 2] & (1 << x));
-
-        // Linked to bottom row
-        if (S && y === 7) return true;
-
-        // Linked to top row
-        if (N && y === 3) return true;
-
-        isConnected ||=
-            (N && checkLinkWhiteFromPosition(state, visitedOcts, x, y - 2)) ||
-            (S && checkLinkWhiteFromPosition(state, visitedOcts, x, y + 2));
-    } else {
+    if ((isRed && (x % 2)) || !isRed && (x % 2 === 0)) {
         // Horizontal moves
-        // E
-        const visitedE = visitedOcts[y] & (1 << (x + 2));
-        const E = !visitedE && (state[y] & (1 << (x + 2)));
+        const E = !isMarked(visitedOcts, x + 2, y) && isMarked(state, x + 2, y);
+        const W = !isMarked(visitedOcts, x - 2, y) && isMarked(state, x - 2, y);
 
-        // W
-        const visitedW = visitedOcts[y] & (1 << (x - 2));
-        const W = !visitedW && (state[y] & (1 << (x - 2)));
+        // Only red can win by connecting left to right
+        if (isRed) {
+            // Linked to right col
+            if (E && x === 7) return true;
+
+            // Linked to left col
+            if (W && x === 3) return true;
+        }
 
         isConnected ||=
-            (E && checkLinkWhiteFromPosition(state, visitedOcts, x + 2, y)) ||
-            (W && checkLinkWhiteFromPosition(state, visitedOcts, x - 2, y));
+            (E && checkLinksFromPosition(visitedOcts, x + 2, y, isRed)) ||
+            (W && checkLinksFromPosition(visitedOcts, x - 2, y, isRed));
+    } else {
+        // Vertical moves
+        const N = !isMarked(visitedOcts, x, y - 2) && isMarked(state, x, y - 2);
+        const S = !isMarked(visitedOcts, x, y + 2) && isMarked(state, x, y + 2);
+
+        // Only white can win by connecting top to bottom
+        if (!isRed) {
+            // Linked to bottom row
+            if (S && y === 7) return true;
+
+            // Linked to top row
+            if (N && y === 3) return true;
+        }
+
+        isConnected ||=
+            (N && checkLinksFromPosition(visitedOcts, x, y - 2, isRed)) ||
+            (S && checkLinksFromPosition(visitedOcts, x, y + 2, isRed));
     }
 
     if (isConnected) return true;
 
     return (
-        (TR && checkLinkWhiteFromPosition(state, visitedOcts, x + 1, y - 1)) ||
-        (BR && checkLinkWhiteFromPosition(state, visitedOcts, x + 1, y + 1)) ||
-        (TL && checkLinkWhiteFromPosition(state, visitedOcts, x - 1, y - 1)) ||
-        (BL && checkLinkWhiteFromPosition(state, visitedOcts, x - 1, y + 1))
+        (TR && checkLinksFromPosition(visitedOcts, x + 1, y - 1, isRed)) ||
+        (BR && checkLinksFromPosition(visitedOcts, x + 1, y + 1, isRed)) ||
+        (TL && checkLinksFromPosition(visitedOcts, x - 1, y - 1, isRed)) ||
+        (BL && checkLinksFromPosition(visitedOcts, x - 1, y + 1, isRed))
     );
-
-}
-
-function checkLinkRedFromPosition(state, visitedOcts, x, y) {
-    if (x <= 0 || x >= 10 || y <= 0 || y >= 10) return false;
-    visitedOcts[y] |= 1 << x;
-
-    // Top Right
-    const visitedTR = visitedOcts[y - 1] & (1 << (x + 1));
-    const TR = !visitedTR && (state[y - 1] & (1 << (x + 1)));
-
-    // Bottom Right
-    const visitedBR = visitedOcts[y + 1] & (1 << (x + 1));
-    const BR = !visitedBR && (state[y + 1] & (1 << (x + 1)));
-
-    // Top Left
-    const visitedTL = visitedOcts[y - 1] & (1 << (x - 1));
-    const TL = !visitedTL && (state[y - 1] & (1 << (x - 1)));
-
-    // Bottom Left
-    const visitedBL = visitedOcts[y + 1] & (1 << (x - 1));
-    const BL = !visitedBL && (state[y + 1] & (1 << (x - 1)));
-
-    let isConnected = false;
-
-    if (x % 2) {
-        // Horizontal moves
-        // E
-        const visitedE = visitedOcts[y] & (1 << (x + 2));
-        const E = !visitedE && (state[y] & (1 << (x + 2)));
-
-        // W
-        const visitedW = visitedOcts[y] & (1 << (x - 2));
-        const W = !visitedW && (state[y] & (1 << (x - 2)));
-
-
-        // Linked to right col
-        if (E && x === 7) return true;
-
-        // Linked to left col
-        if (W && x === 3) return true;
-
-        isConnected ||=
-            (E && checkLinkRedFromPosition(state, visitedOcts, x + 2, y)) ||
-            (W && checkLinkRedFromPosition(state, visitedOcts, x - 2, y));
-    } else {
-        // Verticals moves
-        // N
-        const visitedN = visitedOcts[y - 2] & (1 << x);
-        const N = !visitedN && (state[y - 2] & (1 << x));
-
-        // S
-        const visitedS = visitedOcts[y + 2] & (1 << x);
-        const S = !visitedS && (state[y + 2] & (1 << x));
-
-
-        isConnected ||=
-            (N && checkLinkRedFromPosition(state, visitedOcts, x, y - 2)) ||
-            (S && checkLinkRedFromPosition(state, visitedOcts, x, y + 2));
-    }
-
-    if (isConnected) return true;
-
-    return (
-        (TR && checkLinkRedFromPosition(state, visitedOcts, x + 1, y - 1)) ||
-        (BR && checkLinkRedFromPosition(state, visitedOcts, x + 1, y + 1)) ||
-        (TL && checkLinkRedFromPosition(state, visitedOcts, x - 1, y - 1)) ||
-        (BL && checkLinkRedFromPosition(state, visitedOcts, x - 1, y + 1))
-    );
-
 }
 
 export default {
