@@ -2,9 +2,9 @@
 
 ### What is it?
 
-A digital version of this physical board game: [https://boardgamegeek.com/boardgame/3370/connections](https://boardgamegeek.com/boardgame/3370/connections).
+A digital version of the board game [Connections (1991)](https://boardgamegeek.com/boardgame/3370/connections) which was identical to the earlier ["Bridg-It"](https://boardgamegeek.com/boardgame/11052/bridg-it) game.
 
-The board games is similar to the popularly known [Dots and boxes](https://en.wikipedia.org/wiki/Dots_and_boxes) with slightly modified mechanics.
+Bears a passing resemblance to the popularly known [Dots and boxes](https://en.wikipedia.org/wiki/Dots_and_boxes) with slightly modified mechanics.
 
 This version will include a CPU player so you can play connections as a solo game.
 
