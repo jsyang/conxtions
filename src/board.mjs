@@ -1,4 +1,4 @@
-import * as PIXI from './lib/pixi.min.mjs';
+import * as PIXI from '../lib/pixi.min.mjs';
 import Square from './square.mjs';
 import Octogon from './octogon.mjs';
 

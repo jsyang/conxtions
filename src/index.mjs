@@ -1,4 +1,4 @@
-import * as PIXI from './lib/pixi.min.mjs';
+import * as PIXI from '../lib/pixi.min.mjs';
 
 const app = new PIXI.Application({ resizeTo: window });
 document.body.appendChild(app.view);

@@ -1,4 +1,4 @@
-import * as PIXI from './lib/pixi.min.mjs';
+import * as PIXI from '../lib/pixi.min.mjs';
 import { COLOR, SIZE } from './constants.mjs';
 
 function getGraphicalCoords(x, y) {
